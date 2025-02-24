@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>Weather App</title>
+
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon-iphone-60x60.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="images/apple-touchicon-ipad-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touchicon-iphone-retina-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="images/apple-touchicon-ipad-retina-152x152.png">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"rel="stylesheet">
+	<!-- Include Bootstrap Icons -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="d-flex justify-content-center align-items-center">
+    <div class="card bg-dark col-lg-4 col-md-5 col-8 mt-2">
+        <div class="card-body"> 
+            <h2 id="city"class="text-white text-center">:(</h2>
+            <h3 id="temp" class="text-white text-center">:|</h3>
+            <h3 id="humidity" class="text-white text-center">:3</h3>
+            <h3 id="condition" class="text-white text-center bi-cloud-haze">:P</h3>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const apiURL = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,snowfall&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto"
+
+        async function getWeather(){
+            try{
+                const objResponse = await fetch(apiURL)
+                
+
+                if(!objResponse.ok){
+                throw new Error(`HTTP Error Status:${objResponse.status}`)
+
+                const weatherData = await objResponse.json()
+                if(weatherData.outcome){
+                    const curWeatherData = data.current_weather;
+            
+                    // Extract necessary weather data
+                    const cityName = "Sample City"; // You can use reverse geocoding to get city name
+                    const temp = curWeatherData.temperature;
+                    const humidity = curWeatherData.humidity;
+                    const condition = curWeatherData.weathercode;
+
+                    document.getElementById("city").textContent = cityName;
+                    document.getElementById('temp').textContent = `${curWeatherData.temperature}°F`;
+                    document.getElementById('humidity').textContent = `${curWeatherData.humidity}%`;
+                    document.getElementById('condition').textContent = `${curWeatherData.weathercode}`;
+                }
+            }
+            }catch(objError){
+                console.log("Error fetching weatherData", objError)
+            }
+            
+        }
+        getWeather();
+    </script>
+</body>
+</html>
