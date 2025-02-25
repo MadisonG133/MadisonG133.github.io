@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <title>Weather App</title>
 
-    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <!-- <link rel="icon" type="image/x-icon" href="/images/favicon.ico"> -->
     <link rel="apple-touch-icon" href="images/apple-touch-icon-iphone-60x60.png">
     <link rel="apple-touch-icon" sizes="60x60" href="images/apple-touchicon-ipad-76x76.png">
     <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touchicon-iphone-retina-120x120.png">
@@ -17,52 +17,187 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"rel="stylesheet">
 	<!-- Include Bootstrap Icons -->
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" /> 
     <link rel="manifest" href="manifest.json">
 </head>
 <body class="d-flex justify-content-center align-items-center">
-    <div class="card bg-dark col-lg-4 col-md-5 col-8 mt-2">
-        <div class="card-body"> 
-            <h2 id="city"class="text-white text-center">:(</h2>
-            <h3 id="temp" class="text-white text-center">:|</h3>
-            <h3 id="humidity" class="text-white text-center">:3</h3>
-            <h3 id="condition" class="text-white text-center bi-cloud-haze">:P</h3>
-        </div>
+    <div class="bg-dark text-white text-center" id="weather-info">
+        <p class="text-white text-center">Loading weather data...</p>
     </div>
 
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>  
+
+    <!-- The script below is using 3 different APIs: Open Meteo, Geolocation, and OpenStreetMap.
+     In order to get the user's current location, so their location and the weather data for that 
+     location is can be displayed. I just want to note that I used a lot of try catch functions in this. 
+     -->
+
     <script>
-        const apiURL = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,snowfall&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto"
+        
+        //This function is going to see if it can get the user's location
+        async function getUserLocation() {
+            try {
+                // Attempt to get the user's location
+                const position = await new Promise((resolve, reject) => {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(resolve, reject);
+                    } else {
+                        reject('Geolocation is not supported by this browser.');
+                    }
+                });
 
-        async function getWeather(){
-            try{
-                const objResponse = await fetch(apiURL)
-                
+                // If they can get the user's location, then get the latitude and logitude of it
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
 
-                if(!objResponse.ok){
-                throw new Error(`HTTP Error Status:${objResponse.status}`)
+                // Once we have that, fetch weather data and location name as well as pass those through them
+                await getWeatherData(latitude, longitude);
+                await getLocationName(latitude, longitude);
 
-                const weatherData = await objResponse.json()
-                if(weatherData.outcome){
-                    const curWeatherData = data.current_weather;
-            
-                    // Extract necessary weather data
-                    const cityName = "Sample City"; // You can use reverse geocoding to get city name
-                    const temp = curWeatherData.temperature;
-                    const humidity = curWeatherData.humidity;
-                    const condition = curWeatherData.weathercode;
-
-                    document.getElementById("city").textContent = cityName;
-                    document.getElementById('temp').textContent = `${curWeatherData.temperature}°F`;
-                    document.getElementById('humidity').textContent = `${curWeatherData.humidity}%`;
-                    document.getElementById('condition').textContent = `${curWeatherData.weathercode}`;
-                }
+            } catch (error) {
+                // If the user doesn't allow or support sharing location, then throw an error
+                console.error('Error getting user location:', error);
+                alert('Unable to retrieve your location. Please allow location access or check your browser settings.');
             }
-            }catch(objError){
-                console.log("Error fetching weatherData", objError)
-            }
-            
         }
-        getWeather();
+
+        // Function to fetch weather data from Open Meteo API
+        async function getWeatherData(latitude, longitude) {
+            //const meteoURL= `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,relative_humidity_2m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`
+            //const meteoURL=`https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,relative_humidity_2m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`
+            const meteoURL= `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`
+            //const meteoURL = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,relative_humidity_2m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`
+
+            try {
+                const response = await fetch(meteoURL);
+                if (!response.ok) {
+                    throw new Error('Network response failed');
+                }
+                const data = await response.json();
+                const weatherData = data.current_weather;
+                const hourlyData = data.hourly;
+                console.log(weatherData);
+                console.log(hourlyData);
+
+                const currentDateTime = new Date(weatherData.time);
+                // Using the Date object to get the hour (pad with zero if needed)
+                const hour = String(currentDateTime.getHours()).padStart(2, '0');
+                // Use the date portion from the API (first 10 characters) and the extracted hour to create the full-hour string
+                const datePart = weatherData.time.slice(0, 10); // Format: YYYY-MM-DD
+                const currentTimeHour = `${datePart}T${hour}:00`;
+
+                // Find the index in the hourly data that matches our currentTimeHour
+                const index = hourlyData.time.indexOf(currentTimeHour);
+                const humidity = index !== -1 ? hourlyData.relative_humidity_2m[index] : 'N/A';
+
+                displayWeatherData(weatherData, humidity);
+
+
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('weather-info').innerHTML = 'Failed to load weather data.';
+            }
+        }
+
+        
+                
+        // Function to fetch location name using OpenStreetMap's Nominatim API (reverse geocoding)
+        async function getLocationName(latitude, longitude) {
+            const geoURL = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+
+            try {
+                const response = await fetch(geoURL);
+                if(!response.ok){
+                    throw new Error('Network response failed')
+                }
+                const data = await response.json();
+                const location = data.address;
+                console.log(location);
+                const locationCity = location.city;
+                const locationState = location.state || "";
+                locationName = `${locationCity}, ${locationState}`;
+                displayLocationName(locationName);
+            } catch (error) {
+                console.error('Error fetching location name:', error);
+                document.getElementById('weather-info').innerHTML += '<p>Unable to retrieve location name.</p>';
+            }
+        }
+        function getWeatherIconClass(weathercode) {
+            if (weathercode === 0) {
+                return 'bi-sun';
+            } else if (weathercode === 1 || weathercode === 2) {
+                return 'bi-cloud-sun';
+            } else if (weathercode === 3) {
+                return 'bi-cloud';
+            } else if (weathercode === 45 || weathercode === 48) {
+                return 'bi-cloud-fog';
+            } else if (weathercode >= 51 && weathercode <= 57) {
+                return 'bi-cloud-drizzle';
+            } else if (weathercode >= 61 && weathercode <= 67) {
+                return 'bi-cloud-rain';
+            } else if ((weathercode >= 71 && weathercode <= 77) || (weathercode >= 85 && weathercode <= 86)) {
+                return 'bi-cloud-snow';
+            } else if (weathercode >= 80 && weathercode <= 82) {
+                return 'bi-cloud-rain';
+            } else if (weathercode === 95 || weathercode === 96 || weathercode === 99) {
+                return 'bi-cloud-lightning';
+            } else {
+                return 'bi-cloud-sun';
+            }
+        }
+
+        function getWeatherConditionDescription(weathercode) {
+            if (weathercode === 0) {
+                return 'Clear sky';
+            } else if (weathercode === 1 || weathercode === 2) {
+                return 'Mainly clear, partly cloudy, or overcast';
+            } else if (weathercode === 3) {
+                return 'Cloudy';
+            } else if (weathercode === 45 || weathercode === 48) {
+                return 'Fog or depositing rime fog';
+            } else if (weathercode >= 51 && weathercode <= 57) {
+                return 'Drizzle';
+            } else if (weathercode >= 61 && weathercode <= 67) {
+                return 'Rain';
+            } else if (weathercode >= 71 && weathercode <= 77) {
+                return 'Snow fall';
+            } else if (weathercode >= 80 && weathercode <= 82) {
+                return 'Rain showers';
+            } else if (weathercode === 85 || weathercode === 86) {
+                return 'Snow showers';
+            } else if (weathercode === 95 || weathercode === 96 || weathercode === 99) {
+                return 'Thunderstorm';
+            } else {
+                return 'Unknown weather condition';
+            }
+        }
+
+        // Function to display weather data
+        function displayWeatherData(weatherData, humidity) {
+            
+            const weatherInfo = `
+                <p class="bi-thermometer"> ${weatherData.temperature}°F</p>
+                <p class="bi-droplet">${humidity}%</p>
+                <p id="weather-icon" class = "bi ${getWeatherIconClass(weatherData.weathercode)}"> </p>
+                <p> ${getWeatherConditionDescription(weatherData.weathercode)}</p>
+            `;
+            document.getElementById('weather-info').innerHTML = weatherInfo;
+        }
+
+        // Function to display location name
+        function displayLocationName(locationName) {
+            const locationInfo = `<h3 class="text-white text-center">${locationName}</h3>`;
+            document.getElementById('weather-info').innerHTML = locationInfo + document.getElementById('weather-info').innerHTML;
+        }
+
+        // Initialize the app by getting the user's location
+        getUserLocation();
+
+
+        
     </script>
 </body>
 </html>
